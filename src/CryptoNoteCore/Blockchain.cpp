@@ -1071,6 +1071,13 @@ bool Blockchain::handle_alternative_block(const Block& b, const Crypto::Hash& id
       return false;
     }
 
+   // Disable merged mining
+    TransactionExtraMergeMiningTag mmTag;
+    if (getMergeMiningTagFromExtra(bei.bl.baseTransaction.extra, mmTag) && bei.height >= CryptoNote::parameters::UPGRADE_HEIGHT_V5) {
+      logger(ERROR, BRIGHT_RED) << "Merge mining tag was found in extra of miner transaction";
+      return false;
+
+
     // Always check PoW for alternative blocks
     m_is_in_checkpoint_zone = false;
     difficulty_type current_diff = get_next_difficulty_for_alternative_chain(alt_chain, bei);
@@ -1787,6 +1794,17 @@ bool Blockchain::pushBlock(const Block& blockData, const std::vector<Transaction
   if (!checkParentBlockSize(blockData, blockHash)) {
     bvc.m_verifivation_failed = true;
     return false;
+  }
+
+
+  // Disable merged mining
+  uint32_t height = 0;
+  TransactionExtraMergeMiningTag mmTag;
+  if (m_blockIndex.getBlockHeight(blockHash, height)) {
+    if (getMergeMiningTagFromExtra(blockData.baseTransaction.extra, mmTag) && height >= CryptoNote::parameters::UPGRADE_HEIGHT_V5) {
+      logger(ERROR, BRIGHT_RED) << "Merge mining tag was found in extra of miner transaction";
+      return false;
+    }
   }
 
   if (blockData.previousBlockHash != getTailId()) {
