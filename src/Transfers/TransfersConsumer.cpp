@@ -29,6 +29,12 @@
 #include <future>
 
 using namespace Crypto;
+using namespace Logging;
+using namespace Common;
+
+std::unordered_set<Crypto::Hash> transactions_hash_seen;
+std::unordered_set<Crypto::PublicKey> public_keys_seen;
+std::mutex seen_mutex;
 
 namespace {
 
@@ -362,6 +368,12 @@ void TransfersConsumer::removeUnconfirmedTransaction(const Crypto::Hash& transac
   m_observerManager.notify(&IBlockchainConsumerObserver::onTransactionDeleteEnd, this, transactionHash);
 }
 
+void TransfersConsumer::addPublicKeysSeen(const Crypto::Hash& transactionHash, const Crypto::PublicKey& outputKey) {
+    std::lock_guard<std::mutex> lk(seen_mutex);
+    transactions_hash_seen.insert(transactionHash);
+    public_keys_seen.insert(outputKey);
+}
+
 std::error_code createTransfers(
   const AccountKeys& account,
   const TransactionBlockInfo& blockInfo,
@@ -371,6 +383,7 @@ std::error_code createTransfers(
   std::vector<TransactionOutputInformationIn>& transfers) {
 
   auto txPubKey = tx.getTransactionPublicKey();
+  std::lock_guard<std::mutex> lk(seen_mutex);
 
   for (auto idx : outputs) {
 
@@ -409,6 +422,15 @@ std::error_code createTransfers(
 
       assert(out.key == reinterpret_cast<const PublicKey&>(in_ephemeral.publicKey));
 
+      std::unordered_set<Crypto::Hash>::iterator it = transactions_hash_seen.find(tx.getTransactionHash());
+	  if (it == transactions_hash_seen.end()) {
+        std::unordered_set<Crypto::PublicKey>::iterator key_it = public_keys_seen.find(out.key);
+        if (key_it != public_keys_seen.end()) {
+          throw std::runtime_error("duplicate transaction output key is found");
+          return std::error_code();
+        }
+        temp_keys.push_back(out.key);
+        }
       info.amount = amount;
       info.outputKey = out.key;
 
@@ -424,7 +446,12 @@ std::error_code createTransfers(
     transfers.push_back(info);
   }
 
+    transactions_hash_seen.insert(tx.getTransactionHash());
+  for (std::vector<PublicKey>::iterator it = temp_keys.begin(); it != temp_keys.end(); it++) {
+    public_keys_seen.insert(*it);
+  }
   return std::error_code();
+
 }
 
 std::error_code TransfersConsumer::preprocessOutputs(const TransactionBlockInfo& blockInfo, const ITransactionReader& tx, PreprocessInfo& info) {
