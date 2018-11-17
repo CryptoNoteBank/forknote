@@ -383,6 +383,7 @@ std::error_code createTransfers(
   std::vector<TransactionOutputInformationIn>& transfers) {
 
   auto txPubKey = tx.getTransactionPublicKey();
+  std::vector<PublicKey> temp_keys;
   std::lock_guard<std::mutex> lk(seen_mutex);
 
   for (auto idx : outputs) {

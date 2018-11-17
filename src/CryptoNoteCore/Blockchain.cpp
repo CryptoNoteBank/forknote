@@ -1071,11 +1071,7 @@ bool Blockchain::handle_alternative_block(const Block& b, const Crypto::Hash& id
       return false;
     }
 
-   // Disable merged mining
-    TransactionExtraMergeMiningTag mmTag;
-    if (getMergeMiningTagFromExtra(bei.bl.baseTransaction.extra, mmTag) && bei.height >= CryptoNote::parameters::UPGRADE_HEIGHT_V5) {
-      logger(ERROR, BRIGHT_RED) << "Merge mining tag was found in extra of miner transaction";
-      return false;
+   // Disable merged mining - can be removed as post guide
 
 
     // Always check PoW for alternative blocks
@@ -1797,15 +1793,8 @@ bool Blockchain::pushBlock(const Block& blockData, const std::vector<Transaction
   }
 
 
-  // Disable merged mining
-  uint32_t height = 0;
-  TransactionExtraMergeMiningTag mmTag;
-  if (m_blockIndex.getBlockHeight(blockHash, height)) {
-    if (getMergeMiningTagFromExtra(blockData.baseTransaction.extra, mmTag) && height >= CryptoNote::parameters::UPGRADE_HEIGHT_V5) {
-      logger(ERROR, BRIGHT_RED) << "Merge mining tag was found in extra of miner transaction";
-      return false;
-    }
-  }
+  // Disable merged mining * can be removed as post-guide
+
 
   if (blockData.previousBlockHash != getTailId()) {
     logger(INFO, BRIGHT_WHITE) <<
