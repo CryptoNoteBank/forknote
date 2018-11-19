@@ -16,6 +16,7 @@
 // along with Bytecoin.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "Checkpoints.h"
+#include "../CryptoNoteConfig.h"
 #include "Common/StringTools.h"
 
 using namespace Logging;
